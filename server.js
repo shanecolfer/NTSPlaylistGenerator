@@ -197,8 +197,14 @@ app.post('/login', function(req, res){
 app.get('/loggedIn', function(req, res){
 
     //Reset tokens to current users from cookie
-    spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-    spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+    try {
+        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"]) // may throw three types of exceptions
+      } catch (e) {
+          console.log("No access token redirect to login")
+          res.redirect("/")
+      }
+
 
     // Get the authenticated user
     spotifyApi.getMe()
