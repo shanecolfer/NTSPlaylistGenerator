@@ -1,6 +1,7 @@
 //Require express
 //Require ejs locals for html rendering
 const express = require('express');
+const session = require('express-session');
 const ejsLocals = require('ejs-locals');
 var SpotifyWebApi = require('spotify-web-api-node');
 
@@ -12,11 +13,35 @@ const {PythonShell} = require('python-shell');
 //Create express server 
 const app = express();
 
+//Configure express-session
+app.use(session(
+    {
+        //Set maximum age of the cookie in milliseconds
+        cookie: 
+        {
+            path: '/',
+            maxAge: 1000 * 60 * 60, //Max age of 1 hr
+            sameSite: true, //Cookies only accepted from same domain
+            secure: false,
+        },
+    
+        //Set name for the session id cookie
+        name: 'session_id',
+    
+        resave: false,
+    
+        saveUninitialized: false,
+    
+        //Set key used to sign cookie
+        secret: 'shane'
+    }
+    ))
+
 //var playlistURL = ""
 
 //Define scopes
 var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public'],
-  redirectUri = 'http://ntsplaylistgenerator.com/callback',
+  redirectUri = 'http://localhost:80/callback',
   clientId = 'fd8fca00814a47628439ca0379826f33',
   state = 'user-modify-playback-state';
 
@@ -60,6 +85,9 @@ function createSpotifyPlaylist(finishedOutput){
     //Search for tracks
     for(var i = 1; i < count; i++)
     {
+        //Reset tokens to current users from cookie
+        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
         // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
         spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
             .then(function(data) {
@@ -78,7 +106,11 @@ function createSpotifyPlaylist(finishedOutput){
 
     //Wait 2 seconds for searching to finish before creating playlist
     setTimeout(() => { 
-         //Create spotify playlsit
+
+            //Reset tokens to current users from cookie
+            spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+            spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+            //Create spotify playlsit
             spotifyApi.createPlaylist(finishedOutput[0]['playlistTitle'], { 'description': 'Created by script', 'public': true })
             .then(function(data) {
                 //Write to log
@@ -86,6 +118,8 @@ function createSpotifyPlaylist(finishedOutput){
                 //Get playlist ID
                 playlistID = data.body['id']
                 // Add tracks to created playlist
+                spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+                spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
                 spotifyApi.addTracksToPlaylist(playlistID, trackIDs)
                 .then(function(data) {
                     console.log('Added tracks to playlist!');
@@ -121,6 +155,9 @@ app.get('/callback', function(req, res) {
     // Retrieve an access token and a refresh token
     spotifyApi.authorizationCodeGrant(code).then(
     function(data) {
+
+      const { access_token, refresh_token } = data.body  
+
       console.log('The token expires in ' + data.body['expires_in']);
       console.log('The access token is ' + data.body['access_token']);
       console.log('The refresh token is ' + data.body['refresh_token']);
@@ -128,6 +165,9 @@ app.get('/callback', function(req, res) {
       // Set the access token on the API object to use it in later calls
       spotifyApi.setAccessToken(data.body['access_token']);
       spotifyApi.setRefreshToken(data.body['refresh_token']);
+
+      //Assign these to cookie
+      req.session.spotifyAccount = { access_token, refresh_token }
 
       res.redirect('/loggedIn');
     },
@@ -155,11 +195,15 @@ app.post('/login', function(req, res){
 
 //Display user info
 app.get('/loggedIn', function(req, res){
+
     // Get the authenticated user
     spotifyApi.getMe()
         .then(function(data) {
             console.log('Some information about the authenticated user', data.body);
+            //Set session id to users email.
+            req.session.session_id = data.body.email
             res.sendFile(__dirname + '/logged_in.html');
+            console.log(req.session.session_id)
     }, function(err) {
             console.log('Something went wrong!', err);
             res.redirect("/")
@@ -170,93 +214,110 @@ app.get('/loggedIn', function(req, res){
 //Scrape URL
 app.post('/scrapeURL', function(req,res)
 {  
-    var playlistCreated
-    var playlistURL = ""
 
-    collectRequestData(req, result => {
-        console.log(result.playlistURL)
-        playlistURL = result.playlistURL
+    if(req.session.session_id == null)
+    {
+        res.redirect('/')
+    }
+    else
+    {
+        var playlistCreated
+        var playlistURL = ""
 
-        console.log('playlistURL: ' + playlistURL)
+        collectRequestData(req, result => {
+            console.log(result.playlistURL)
+            playlistURL = result.playlistURL
 
-        let options = {
-            mode: 'text',
-            pythonOptions: ['-u'], // get print results in real-time
-            scriptPath: __dirname,
-            args: [playlistURL]
-        };
+            console.log('playlistURL: ' + playlistURL)
 
-        PythonShell.run('webscraper.py', options, function (err, results) {
+            let options = {
+                mode: 'text',
+                pythonOptions: ['-u'], // get print results in real-time
+                scriptPath: __dirname,
+                args: [playlistURL]
+            };
 
-            console.log(results)
-            //If results equal null, bad URL passed and write to page.
-            if (results === null)
-            {
-                res.sendFile(__dirname + '/error.html');
-            }
-            else //Else if grand carry on to creating playlist
-            {
-                //JSONify the result
-                var finishedOutput = JSON.parse(results);
+            PythonShell.run('webscraper.py', options, function (err, results) {
 
-                console.log(finishedOutput);
-
-                //Declare array to hold track IDs of searched tracks
-                var trackIDs = []
-
-                //Get length of input array for loop
-                var count = Object.keys(finishedOutput).length;
-
-                //Declare string to hold playlist ID of created playlist
-                var playlistID = ""
-
-                //Search for tracks
-                for(var i = 1; i < count; i++)
+                console.log(results)
+                //If results equal null, bad URL passed and write to page.
+                if (results === null)
                 {
-                    // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
-                    spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
-                        .then(function(data) {
-                            try{
-                                //Push to array of track IDs
-                                trackIDs.push("spotify:track:" + data.body['tracks']['items'][0]['id']);
-                            }
-                            catch(err)
-                            {
-                                console.log("No ID")
-                            }
-                    }, function(err) {
-                            console.log('Something went wrong!', err);
-                    })
+                    res.sendFile(__dirname + '/error.html');
                 }
+                else //Else if grand carry on to creating playlist
+                {
+                    //JSONify the result
+                    var finishedOutput = JSON.parse(results);
 
-                //Wait 2 seconds for searching to finish before creating playlist
-                setTimeout(() => { 
-                    //Create spotify playlsit
-                        spotifyApi.createPlaylist(finishedOutput[0]['playlistTitle'], { 'description': 'Created by script', 'public': true })
-                        .then(function(data) {
-                            //Write to log
-                            console.log('Created playlist!');
-                            //Get playlist ID
-                            playlistID = data.body['id']
-                            // Add tracks to created playlist
-                            spotifyApi.addTracksToPlaylist(playlistID, trackIDs)
+                    console.log(finishedOutput);
+
+                    //Declare array to hold track IDs of searched tracks
+                    var trackIDs = []
+
+                    //Get length of input array for loop
+                    var count = Object.keys(finishedOutput).length;
+
+                    //Declare string to hold playlist ID of created playlist
+                    var playlistID = ""
+
+                    //Search for tracks
+                    for(var i = 1; i < count; i++)
+                    {
+                        //Reset tokens to current users from cookie
+                        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+                        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+
+                        // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
+                        spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
                             .then(function(data) {
-                                console.log('Added tracks to playlist!');
-                                //Return true
-                                res.sendFile(__dirname + '/playlist_created.html');
-                            }, function(err) {
-                                console.log('Something went wrong!', err);
-                                res.sendFile(__dirname + '/error.html'); 
-                            });
-
+                                try{
+                                    //Push to array of track IDs
+                                    trackIDs.push("spotify:track:" + data.body['tracks']['items'][0]['id']);
+                                }
+                                catch(err)
+                                {
+                                    console.log("No ID")
+                                }
                         }, function(err) {
                                 console.log('Something went wrong!', err);
-                                res.sendFile(__dirname + '/error.html'); 
-                }); }, 2000);
-            }
-        });
-    })
+                        })
+                    }
 
+                    //Wait 2 seconds for searching to finish before creating playlist
+                    setTimeout(() => { 
+                        //Reset tokens to current users from cookie
+                        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+                        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+                        //Create spotify playlsit
+                            spotifyApi.createPlaylist(finishedOutput[0]['playlistTitle'], { 'description': 'Created by script', 'public': true })
+                            .then(function(data) {
+                                //Write to log
+                                console.log('Created playlist!');
+                                //Get playlist ID
+                                playlistID = data.body['id']
+                                //Reset tokens to current users from cookie
+                                spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+                                spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+                                // Add tracks to created playlist
+                                spotifyApi.addTracksToPlaylist(playlistID, trackIDs)
+                                .then(function(data) {
+                                    console.log('Added tracks to playlist!');
+                                    //Return true
+                                    res.sendFile(__dirname + '/playlist_created.html');
+                                }, function(err) {
+                                    console.log('Something went wrong!', err);
+                                    res.sendFile(__dirname + '/error.html'); 
+                                });
+
+                            }, function(err) {
+                                    console.log('Something went wrong!', err);
+                                    res.sendFile(__dirname + '/error.html'); 
+                    }); }, 2000);
+                }
+            });
+        })
+    }
     
 })
 
