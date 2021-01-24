@@ -16,7 +16,7 @@ const app = express();
 
 //Define scopes
 var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public'],
-  redirectUri = 'http://shanecolfer.com/callback',
+  redirectUri = 'http://ntsplaylistgenerator.com/callback',
   clientId = 'fd8fca00814a47628439ca0379826f33',
   state = 'user-modify-playback-state';
 
@@ -105,8 +105,8 @@ function createSpotifyPlaylist(finishedOutput){
 
 
 //Start server
-app.listen(8080, function() {
-    console.log('listening on port 8080');
+app.listen(80, function() {
+    console.log('listening on port 80');
 })
 
 /* Handle authorization callback from Spotify */
