@@ -16,7 +16,7 @@ const app = express();
 
 //Define scopes
 var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public'],
-  redirectUri = 'http://192.168.0.87:2000/callback',
+  redirectUri = 'http://shanecolfer.com/callback',
   clientId = 'fd8fca00814a47628439ca0379826f33',
   state = 'user-modify-playback-state';
 
@@ -105,8 +105,8 @@ function createSpotifyPlaylist(finishedOutput){
 
 
 //Start server
-app.listen(2000, function() {
-    console.log('listening on port 2000');
+app.listen(8080, function() {
+    console.log('listening on port 8080');
 })
 
 /* Handle authorization callback from Spotify */
@@ -181,7 +181,7 @@ app.post('/scrapeURL', function(req,res)
         let options = {
             mode: 'text',
             pythonOptions: ['-u'], // get print results in real-time
-            scriptPath: 'C:\\Users\\Shane\\Documents\\NTSPlaylisterWeb\\',
+            scriptPath: __dirname,
             args: [playlistURL]
         };
 
