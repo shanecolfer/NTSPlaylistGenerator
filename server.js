@@ -196,6 +196,11 @@ app.post('/login', function(req, res){
 //Display user info
 app.get('/loggedIn', function(req, res){
 
+    if(req.session.session_id == null)
+    {
+        res.redirect('/')
+    }
+    
     // Get the authenticated user
     spotifyApi.getMe()
         .then(function(data) {
@@ -214,6 +219,7 @@ app.get('/loggedIn', function(req, res){
 //Scrape URL
 app.post('/scrapeURL', function(req,res)
 {  
+    console.log(req.session.session_id)
 
     if(req.session.session_id == null)
     {
