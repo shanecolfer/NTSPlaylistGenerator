@@ -162,6 +162,7 @@ app.get('/loggedIn', function(req, res){
             res.sendFile(__dirname + '/logged_in.html');
     }, function(err) {
             console.log('Something went wrong!', err);
+            res.redirect("/login")
     });
     
 })
