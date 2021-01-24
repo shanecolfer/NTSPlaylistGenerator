@@ -3,6 +3,8 @@ import webbrowser
 import json
 from bs4 import BeautifulSoup
 import sys
+import io
+
 
 def main():
     #Initialise error variable
@@ -11,8 +13,7 @@ def main():
     outputDict = {}
 
     # This needs to be a system argument ***
-    URL = 'https://www.nts.live/shows/nailah-hunter/episodes/naila-hunter-30th-november-2020'
-
+    URL = sys.argv[1]
     #Get contents of show URL
     page = requests.get(URL)
 
@@ -68,14 +69,14 @@ def main():
             
             #outputString = outputString + ("SpotifyID: " + spotifyId + "\n")
 
-        print(outputDict)
+        #print(outputDict)
 
         jsonOutputDict = json.dumps(outputDict)
 
         print(jsonOutputDict)
 
-        with open('data.txt', 'w') as outfile:
-            json.dump(outputDict, outfile)
+       # with io.open('data.txt', 'w') as outfile:
+        #    json.dump(outputDict, outfile)
 
 
 if __name__ == "__main__":
