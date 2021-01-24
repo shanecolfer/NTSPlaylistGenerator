@@ -155,11 +155,11 @@ app.post('/login', function(req, res){
 
 //Display user info
 app.get('/loggedIn', function(req, res){
-    res.sendFile(__dirname + '/logged_in.html');
     // Get the authenticated user
     spotifyApi.getMe()
         .then(function(data) {
             console.log('Some information about the authenticated user', data.body);
+            res.sendFile(__dirname + '/logged_in.html');
     }, function(err) {
             console.log('Something went wrong!', err);
     });
