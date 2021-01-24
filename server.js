@@ -41,7 +41,7 @@ app.use(session(
 
 //Define scopes
 var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public'],
-  redirectUri = 'http://localhost:80/callback',
+  redirectUri = 'http://ntsplaylistgenerator.com/callback',
   clientId = 'fd8fca00814a47628439ca0379826f33',
   state = 'user-modify-playback-state';
 
