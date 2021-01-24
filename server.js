@@ -196,11 +196,10 @@ app.post('/login', function(req, res){
 //Display user info
 app.get('/loggedIn', function(req, res){
 
-    if(req.session.session_id == null)
-    {
-        res.redirect('/')
-    }
-    
+    //Reset tokens to current users from cookie
+    spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
+    spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+
     // Get the authenticated user
     spotifyApi.getMe()
         .then(function(data) {
