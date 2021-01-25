@@ -86,8 +86,8 @@ function createSpotifyPlaylist(finishedOutput){
     for(var i = 1; i < count; i++)
     {
         //Reset tokens to current users from cookie
-        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+        spotifyApi.setAccessToken(req.session.access_token)
+        spotifyApi.setRefreshToken(req.session.refresh_token)
         // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
         spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
             .then(function(data) {
@@ -108,8 +108,8 @@ function createSpotifyPlaylist(finishedOutput){
     setTimeout(() => { 
 
             //Reset tokens to current users from cookie
-            spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-            spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+            spotifyApi.setAccessToken(req.session.access_token)
+            spotifyApi.setRefreshToken(req.session.refresh_token)
             //Create spotify playlsit
             spotifyApi.createPlaylist(finishedOutput[0]['playlistTitle'], { 'description': 'Created by script', 'public': true })
             .then(function(data) {
@@ -118,8 +118,8 @@ function createSpotifyPlaylist(finishedOutput){
                 //Get playlist ID
                 playlistID = data.body['id']
                 // Add tracks to created playlist
-                spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-                spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+                spotifyApi.setAccessToken(req.session.access_token)
+                spotifyApi.setRefreshToken(req.session.refresh_token)
                 spotifyApi.addTracksToPlaylist(playlistID, trackIDs)
                 .then(function(data) {
                     console.log('Added tracks to playlist!');
@@ -156,8 +156,6 @@ app.get('/callback', function(req, res) {
     spotifyApi.authorizationCodeGrant(code).then(
     function(data) {
 
-      const { access_token, refresh_token } = data.body  
-
       console.log('The token expires in ' + data.body['expires_in']);
       console.log('The access token is ' + data.body['access_token']);
       console.log('The refresh token is ' + data.body['refresh_token']);
@@ -167,7 +165,10 @@ app.get('/callback', function(req, res) {
       spotifyApi.setRefreshToken(data.body['refresh_token']);
 
       //Assign these to cookie
-      req.session.spotifyAccount = { access_token, refresh_token }
+      req.session.access_token = data.body['access_token']
+      req.session.refresh_token = data.body['refresh_token']
+
+      console.log("session.accesstoken" + req.session.access_token)
 
       res.redirect('/loggedIn');
     },
@@ -196,10 +197,13 @@ app.post('/login', function(req, res){
 //Display user info
 app.get('/loggedIn', function(req, res){
 
+
+    console.log("session.accesstoken" + req.session.spotifyAccount["access_token"])
+
     //Reset tokens to current users from cookie
     try {
-        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"]) // may throw three types of exceptions
+        spotifyApi.setAccessToken(req.session.access_token)
+        spotifyApi.setRefreshToken(req.session.refresh_token) // may throw three types of exceptions
       } catch (e) {
           console.log("No access token redirect to login")
           res.redirect("/")
@@ -276,8 +280,8 @@ app.post('/scrapeURL', function(req,res)
                     for(var i = 1; i < count; i++)
                     {
                         //Reset tokens to current users from cookie
-                        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-                        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+                        spotifyApi.setAccessToken(req.session.access_token)
+                        spotifyApi.setRefreshToken(req.session.refresh_token)
 
                         // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
                         spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
@@ -298,8 +302,8 @@ app.post('/scrapeURL', function(req,res)
                     //Wait 2 seconds for searching to finish before creating playlist
                     setTimeout(() => { 
                         //Reset tokens to current users from cookie
-                        spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-                        spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+                        spotifyApi.setAccessToken(req.session.access_token)
+                        spotifyApi.setRefreshToken(req.session.refresh_token)
                         //Create spotify playlsit
                             spotifyApi.createPlaylist(finishedOutput[0]['playlistTitle'], { 'description': 'Created by script', 'public': true })
                             .then(function(data) {
@@ -308,8 +312,8 @@ app.post('/scrapeURL', function(req,res)
                                 //Get playlist ID
                                 playlistID = data.body['id']
                                 //Reset tokens to current users from cookie
-                                spotifyApi.setAccessToken(req.session.spotifyAccount["access_token"])
-                                spotifyApi.setRefreshToken(req.session.spotifyAccount["refresh_token"])
+                                spotifyApi.setAccessToken(req.session.access_token)
+                                spotifyApi.setRefreshToken(req.session.refresh_token)
                                 // Add tracks to created playlist
                                 spotifyApi.addTracksToPlaylist(playlistID, trackIDs)
                                 .then(function(data) {
