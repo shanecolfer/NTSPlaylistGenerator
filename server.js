@@ -197,8 +197,7 @@ app.post('/login', function(req, res){
 //Display user info
 app.get('/loggedIn', function(req, res){
 
-
-    console.log("session.accesstoken" + req.session.spotifyAccount["access_token"])
+    console.log("session.accesstoken" + req.session.access_token)
 
     //Reset tokens to current users from cookie
     try {
