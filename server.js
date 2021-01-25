@@ -21,7 +21,6 @@ app.use(session(
         {
             path: '/',
             maxAge: 1000 * 60 * 60, //Max age of 1 hr
-            sameSite: true, //Cookies only accepted from same domain
             secure: false,
         },
     
