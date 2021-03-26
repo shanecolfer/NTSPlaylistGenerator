@@ -6,12 +6,30 @@ const ejsLocals = require('ejs-locals');
 var SpotifyWebApi = require('spotify-web-api-node');
 
 const { parse } = require('querystring');
-const http = require('http');
+const https = require('https');
+const fs = require('fs');
+const port = 443;
+
+app = express();
+
+//Set up keys for HTTPS
+var key = fs.readFileSync(__dirname + '/selfsigned.key').toString();
+var cert = fs.readFileSync(__dirname + '/selfsigned.crt').toString();
+
+var options = {
+    key: key,
+    cert: cert
+};
 
 const {PythonShell} = require('python-shell');
+const { Certificate } = require('crypto');
 
 //Create express server 
-const app = express();
+var server = https.createServer({key: key, cert: cert}, app);
+
+server.listen(port,function(){
+    console.log("Server listening on port: " + port);
+})
 
 //Configure express-session
 app.use(session(
@@ -21,7 +39,7 @@ app.use(session(
         {
             path: '/',
             maxAge: 1000 * 60 * 60, //Max age of 1 hr
-            secure: false,
+            secure: true,
         },
     
         //Set name for the session id cookie
@@ -36,11 +54,13 @@ app.use(session(
     }
     ))
 
+app.listen(port);
+
 //var playlistURL = ""
 
 //Define scopes
 var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public'],
-  redirectUri = 'http://ntsplaylistgenerator.com/callback',
+  redirectUri = 'https://ntsplaylistgenerator.com/callback',
   clientId = 'fd8fca00814a47628439ca0379826f33',
   state = 'user-modify-playback-state';
 
@@ -50,6 +70,25 @@ var credentials = {
     clientSecret: '90779980714142238fc58cb3754f9c04',
     redirectUri: redirectUri
   };
+
+// Author James Harrington 2014
+function base64(file, callback){
+    var coolFile = {};
+    function readerOnload(e){
+      var base64 = btoa(e.target.result);
+      coolFile.base64 = base64;
+      callback(coolFile)
+    };
+  
+    var reader = new FileReader();
+    reader.onload = readerOnload;
+  
+    var file = file[0].files[0];
+    coolFile.filetype = file.type;
+    coolFile.size = file.size;
+    coolFile.filename = file.name;
+    reader.readAsBinaryString(file);
+  }
 
 //Make spotify API object using credentials
 var spotifyApi = new SpotifyWebApi(credentials);
@@ -134,13 +173,22 @@ function createSpotifyPlaylist(finishedOutput){
                     return false
     }); }, 2000);
 
+    //Add playlist image
+    base64('ntslogo.png'), function(data){
+        console.log(data.base64)
+      }
+
+    // Upload a custom playlist cover image
+    spotifyApi.uploadCustomPlaylistCoverImage(playlistID,data.base64)
+    .then(function(data) {
+    console.log('Playlsit cover image uploaded!');
+    }, function(err) {
+    console.log('Something went wrong!', err);
+    });
+
 }
 
 
-//Start server
-app.listen(80, function() {
-    console.log('listening on port 80');
-})
 
 /* Handle authorization callback from Spotify */
 app.get('/callback', function(req, res) {
@@ -281,23 +329,28 @@ app.post('/scrapeURL', function(req,res)
                         spotifyApi.setAccessToken(req.session.access_token)
                         spotifyApi.setRefreshToken(req.session.refresh_token)
 
+                        //Write track arist and title to log
+                        //console.log("Title: " + finishedOutput[i]['title'] + " " + "Artist: " + finishedOutput[i]['artist'])
+
                         // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
                         spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
                             .then(function(data) {
                                 try{
                                     //Push to array of track IDs
                                     trackIDs.push("spotify:track:" + data.body['tracks']['items'][0]['id']);
+                                    //Write added to console
+                                    //console.log("Added --------------")
                                 }
                                 catch(err)
                                 {
-                                    console.log("No ID")
+                                    //console.log("No ID --------------")
                                 }
                         }, function(err) {
                                 console.log('Something went wrong!', err);
                         })
                     }
 
-                    //Wait 2 seconds for searching to finish before creating playlist
+                    //Wait 2 seconds for searching to finish before creating playlist *** SHOULD THIS BE LONGER?
                     setTimeout(() => { 
                         //Reset tokens to current users from cookie
                         spotifyApi.setAccessToken(req.session.access_token)
