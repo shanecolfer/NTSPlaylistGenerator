@@ -13,8 +13,8 @@ const port = 443;
 app = express();
 
 //Set up keys for HTTPS
-var key = fs.readFileSync(__dirname + '/selfsigned.key').toString();
-var cert = fs.readFileSync(__dirname + '/selfsigned.crt').toString();
+var key = fs.readFileSync('/etc/letsencrypt/live/ntsplaylistgenerator.com/privkey.pem').toString();
+var cert = fs.readFileSync('/etc/letsencrypt/live/ntsplaylistgenerator.com/fullchain.pem').toString();
 
 var options = {
     key: key,
@@ -30,6 +30,13 @@ var server = https.createServer({key: key, cert: cert}, app);
 server.listen(port,function(){
     console.log("Server listening on port: " + port);
 })
+
+// Redirect from http port 80 to https
+var http = require('http');
+http.createServer(function (req, res) {
+    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
+    res.end();
+}).listen(80);
 
 //Configure express-session
 app.use(session(
@@ -54,7 +61,6 @@ app.use(session(
     }
     ))
 
-app.listen(port);
 
 //var playlistURL = ""
 
