@@ -294,6 +294,7 @@ app.post('/scrapeURL', function(req,res)
         collectRequestData(req, result => {
             console.log(result.playlistURL)
             playlistURL = result.playlistURL
+	    playlistURL = playlistURL.toLowerCase();
 
             console.log('playlistURL: ' + playlistURL)
 
