@@ -8,35 +8,34 @@ var SpotifyWebApi = require('spotify-web-api-node');
 const { parse } = require('querystring');
 const https = require('https');
 const fs = require('fs');
-const port = 443;
+const port = 8080; // Todo Shane: Change this back to 443
 
 app = express();
 
 //Set up keys for HTTPS
-var key = fs.readFileSync('/etc/letsencrypt/live/ntsplaylistgenerator.com/privkey.pem').toString();
-var cert = fs.readFileSync('/etc/letsencrypt/live/ntsplaylistgenerator.com/fullchain.pem').toString();
+// var key = fs.readFileSync('/etc/letsencrypt/live/ntsplaylistgenerator.com/privkey.pem').toString();
+// var cert = fs.readFileSync('/etc/letsencrypt/live/ntsplaylistgenerator.com/fullchain.pem').toString();
 
-var options = {
-    key: key,
-    cert: cert
-};
+// var options = {
+//     key: key,
+//     cert: cert
+// };
 
 const {PythonShell} = require('python-shell');
 const { Certificate } = require('crypto');
 
+var http = require('http');
+
 //Create express server 
-var server = https.createServer({key: key, cert: cert}, app);
+var server = http.createServer(app);
 
 server.listen(port,function(){
     console.log("Server listening on port: " + port);
 })
 
-// Redirect from http port 80 to https
+/* // Redirect from http port 80 to https
 var http = require('http');
-http.createServer(function (req, res) {
-    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
-    res.end();
-}).listen(80);
+http.createServer().listen(80); */
 
 //Configure express-session
 app.use(session(
@@ -46,7 +45,7 @@ app.use(session(
         {
             path: '/',
             maxAge: 1000 * 60 * 60, //Max age of 1 hr
-            secure: true,
+            secure: false,
         },
     
         //Set name for the session id cookie
@@ -66,7 +65,7 @@ app.use(session(
 
 //Define scopes
 var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public'],
-  redirectUri = 'https://ntsplaylistgenerator.com/callback',
+  redirectUri = 'http://localhost:8080/callback',
   clientId = 'fd8fca00814a47628439ca0379826f33',
   state = 'user-modify-playback-state';
 
@@ -132,7 +131,7 @@ function createSpotifyPlaylist(finishedOutput){
         //Reset tokens to current users from cookie
         spotifyApi.setAccessToken(req.session.access_token)
         spotifyApi.setRefreshToken(req.session.refresh_token)
-        // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
+        
         spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
             .then(function(data) {
                 try{
@@ -339,7 +338,6 @@ app.post('/scrapeURL', function(req,res)
                         //Write track arist and title to log
                         //console.log("Title: " + finishedOutput[i]['title'] + " " + "Artist: " + finishedOutput[i]['artist'])
 
-                        // Search tracks whose artist's name contains 'Kendrick Lamar', and track name contains 'Alright'
                         spotifyApi.searchTracks('track:' + finishedOutput[i]['title'] + " " + "artist:" + finishedOutput[i]['artist'])
                             .then(function(data) {
                                 try{
