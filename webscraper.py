@@ -28,7 +28,7 @@ def main():
     try:
         title = profile[0].find('a', {"class": "bio__artist-link__a nts-link nts-app"}).text
     except AttributeError:
-        title = profile[0].find('h1', {"class": "text-bold"}).text
+        title = profile[0].find('h1', {"class": "episode__heading"}).text
     except IndexError:
         #If there's an index error then usually the link is incorrect
         error = "Y"
@@ -36,10 +36,10 @@ def main():
     #Carry on if no errors
     if error == "N":
         #Get bio subtitle div
-        date = profile[0].find('div', {"class": "bio__title__subtitle"})
+        date = profile[0].find('div', {"class": "bio"})
 
         #Find date within bio subtitle div
-        date = date.find('span', {"id": "episode-broadcast-date"}).text
+        date = date.find('span', {"class": "bio__broadcast-date"}).text
 
         #Strip date for leading space and commas
         date = date.strip(',')
