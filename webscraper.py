@@ -58,7 +58,7 @@ def main():
         for song in songs:
             #Get artist and name from web scrape
             artist = song.find('span',{"class": "track__artist--mobile"}).text
-            trackName = song.find('span',{"class": "track__title"}).text
+            trackName = song.find('div',{"class": "track__title"}).text
 
             outputDict[counter] = {}
 
